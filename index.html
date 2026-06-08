@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Модулятор свайного фундамента</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0e17;
+    color: #e0e6f0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background 0.3s, color 0.3s;
+  }
+  
+  body.bw-mode { background: #ffffff; color: #000000; }
+  body.bw-mode #toolbar { background: #f4f4f4; border-bottom-color: #000000; }
+  body.bw-mode .toolbar-group { border-right-color: #000000; }
+  body.bw-mode .toolbar-group label { color: #333333; }
+  body.bw-mode .toolbar-group input[type="number"] {
+    background: #ffffff; border-color: #000000; color: #000000;
+  }
+  body.bw-mode button {
+    background: #e0e0e0; color: #000000; border-color: #000000;
+  }
+  body.bw-mode button:hover { background: #d0d0d0; }
+  body.bw-mode button.active { background: #000000; color: #ffffff; border-color: #000000; }
+  body.bw-mode #info-panel, body.bw-mode #calc-panel, body.bw-mode #selection-info {
+    background: #ffffff; border-color: #000000; color: #000000;
+  }
+  body.bw-mode #info-panel .info-label, body.bw-mode .calc-row label { color: #333333; }
+  body.bw-mode #info-panel .info-value, body.bw-mode .calc-row.result span:last-child { color: #000000; }
+  body.bw-mode .calc-row input { background: #ffffff; border-color: #000000; color: #000000; }
+
+  #toolbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    min-height: 76px;
+    background: linear-gradient(135deg, #111827, #1a2332);
+    border-bottom: 2px solid #2a3a50;
+    display: flex; align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    gap: 12px;
+    z-index: 100;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    transition: all 0.3s;
+  }
+  #toolbar .logo {
+    font-size: 20px; font-weight: 800; color: #60a5fa;
+    margin-right: 14px; white-space: nowrap;
+    display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;
+  }
+  body.bw-mode #toolbar .logo { color: #000000; }
+  #toolbar .logo svg { width: 26px; height: 26px; }
+  .toolbar-group {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-right: 2px solid #2a3a50; height: 46px;
+  }
+  .toolbar-group:last-child { border-right: none; }
+  .toolbar-group label {
+    font-size: 15px; font-weight: 700; color: #94a3b8;
+    white-space: nowrap; letter-spacing: 0.3px;
+  }
+  .toolbar-group input[type="number"] {
+    width: 85px; padding: 9px 10px;
+    background: #0d1520; border: 2px solid #2a3a50;
+    border-radius: 8px; color: #f8fafc;
+    font-size: 16px; font-weight: 700;
+    text-align: center; outline: none; transition: all 0.2s;
+  }
+  .toolbar-group input[type="number"]:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96,165,250,0.25);
+  }
+  body.bw-mode .toolbar-group input[type="number"]:focus {
+    border-color: #000000; box-shadow: 0 0 0 3px rgba(0,0,0,0.2);
+  }
+  button {
+    padding: 10px 16px; border: 2px solid #2a3a50;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1e2d3d, #1a2535);
+    color: #e2e8f0; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    white-space: nowrap; display: flex;
+    align-items: center; gap: 6px; letter-spacing: 0.3px;
+  }
+  button:hover {
+    background: linear-gradient(135deg, #253545, #203040);
+    border-color: #60a5fa; color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(96,165,250,0.2);
+  }
+  body.bw-mode button:hover {
+    background: #d0d0d0; border-color: #000000; color: #000000;
+    transform: translateY(-1px); box-shadow: none;
+  }
+  button:active { transform: translateY(0); }
+  button:disabled {
+    opacity: 0.35; cursor: not-allowed;
+    transform: none !important; box-shadow: none !important;
+    background: #151c26 !important;
+  }
+  body.bw-mode button:disabled { background: #e0e0e0 !important; color: #999 !important; }
+  button.primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); border-color: #3b82f6; color: #fff; }
+  button.primary:hover { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
+  body.bw-mode button.primary { background: #000000; border-color: #000000; color: #fff; }
+  body.bw-mode button.primary:hover { background: #333333; }
+  button.danger { background: linear-gradient(135deg, #991b1b, #7f1d1d); border-color: #b91c1c; color: #fca5a5; }
+  button.danger:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); box-shadow: 0 6px 20px rgba(185,28,28,0.3); }
+  body.bw-mode button.danger { background: #ffffff; border: 2px solid #000000; color: #000000; }
+  button.success { background: linear-gradient(135deg, #15803d, #166534); border-color: #22c55e; color: #bbf7d0; }
+  button.success:hover { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 6px 20px rgba(34,197,94,0.3); }
+  body.bw-mode button.success { background: #ffffff; border: 2px solid #000000; color: #000000; }
+  button.warning { background: linear-gradient(135deg, #a16207, #854d0e); border-color: #d97706; color: #fde68a; }
+  button.warning:hover { background: linear-gradient(135deg, #d97706, #a16207); box-shadow: 0 6px 20px rgba(217,119,6,0.3); }
+  body.bw-mode button.warning { background: #ffffff; border: 2px solid #000000; color: #000000; }
+  button.active { border-color: #d97706; background: rgba(217,119,6,0.2); color: #fde68a; }
+  body.bw-mode button.active { background: #000000; color: #ffffff; border-color: #000000; }
+
+  #canvas-container {
+    position: fixed; top: 76px; left: 0; right: 0; bottom: 0;
+    overflow: hidden; cursor: grab; background: #0a0e17;
+    transition: background 0.3s;
+  }
+  body.bw-mode #canvas-container { background: #ffffff; }
+  #canvas-container:active { cursor: grabbing; }
+  canvas { display: block; }
+
+  #info-panel {
+    position: fixed; bottom: 20px; left: 20px;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(14px);
+    border: 2px solid #2a3a50;
+    border-radius: 14px;
+    padding: 18px 22px; font-size: 16px; z-index: 100;
+    min-width: 300px;
+    max-height: calc(100vh - 120px); overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    transition: all 0.3s;
+  }
+  #info-panel h3 {
+    font-size: 18px; font-weight: 800; color: #60a5fa;
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  body.bw-mode #info-panel h3 { color: #000000; }
+  #info-panel .info-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; border-bottom: 1px solid rgba(42,58,80,0.6);
+  }
+  body.bw-mode #info-panel .info-row { border-bottom-color: #cccccc; }
+  #info-panel .info-row:last-child { border-bottom: none; }
+  #info-panel .info-label { color: #94a3b8; font-weight: 600; }
+  #info-panel .info-value { color: #f8fafc; font-weight: 700; letter-spacing: 0.3px; }
+
+  #calc-panel {
+    position: fixed;
+    top: 88px; right: 20px;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(14px);
+    border: 2px solid #2a3a50;
+    border-radius: 14px;
+    padding: 18px 22px; font-size: 15px; z-index: 100;
+    display: none;
+    width: 320px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    transition: all 0.3s;
+  }
+  #calc-panel h3 {
+    font-size: 17px; font-weight: 800; color: #22c55e; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  body.bw-mode #calc-panel h3 { color: #000000; }
+  .calc-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid rgba(42,58,80,0.5);
+  }
+  body.bw-mode .calc-row { border-bottom-color: #cccccc; }
+  .calc-row:last-child { border-bottom: none; }
+  .calc-row label { color: #94a3b8; font-weight: 600; flex: 1; }
+  .calc-row input {
+    width: 100px; padding: 5px 8px; background: #0d1520; border: 1px solid #2a3a50;
+    border-radius: 6px; color: #f8fafc; font-size: 14px; font-weight: 700;
+    text-align: right; outline: none; transition: border 0.2s;
+  }
+  .calc-row input:focus { border-color: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
+  body.bw-mode .calc-row input:focus { border-color: #000000; box-shadow: 0 0 0 2px rgba(0,0,0,0.2); }
+  .calc-row.result { margin-top: 4px; }
+  .calc-row.result span:first-child { color: #cbd5e1; font-weight: 600; }
+  .calc-row.result span:last-child { color: #e2e8f0; font-weight: 700; }
+  .calc-divider { height: 1px; background: rgba(42,58,80,0.6); margin: 8px 0; }
+  body.bw-mode .calc-divider { background: #cccccc; }
+  .calc-row.total { padding-top: 10px; border-top: 2px solid #2a3a50; border-bottom: none; }
+  body.bw-mode .calc-row.total { border-top-color: #000000; }
+  .calc-row.total span { font-weight: 800; color: #22c55e; font-size: 16px; }
+  body.bw-mode .calc-row.total span { color: #000000; }
+  .calc-row.total span:last-child { color: #4ade80; font-size: 18px; }
+  body.bw-mode .calc-row.total span:last-child { color: #000000; }
+
+  #zoom-controls {
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 6px; z-index: 100;
+  }
+  #zoom-controls button {
+    width: 46px; height: 46px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; border-radius: 10px; font-weight: 800;
+  }
+
+  #selection-info {
+    position: fixed; top: 88px; right: 20px;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(14px);
+    border: 2px solid #2a3a50;
+    border-radius: 14px;
+    padding: 18px 22px; font-size: 16px; z-index: 100;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    margin-right: 330px;
+    transition: all 0.3s;
+  }
+  #selection-info h3 {
+    font-size: 18px; font-weight: 800; color: #f59e0b; margin-bottom: 10px;
+  }
+  body.bw-mode #selection-info h3 { color: #000000; }
+
+  @media (max-width: 1000px) {
+    #toolbar { padding: 8px; gap: 6px; min-height: auto; }
+    .toolbar-group { padding: 4px 8px; height: 40px; }
+    button { padding: 9px 12px; font-size: 14px; }
+    .toolbar-group input[type="number"] { width: 70px; font-size: 15px; }
+    #toolbar .logo { font-size: 18px; }
+    #calc-panel { width: 280px; right: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="2" y="2" width="20" height="20" rx="2"/>
+      <circle cx="6" cy="6" r="1.5" fill="currentColor"/>
+      <circle cx="12" cy="6" r="1.5" fill="currentColor"/>
+      <circle cx="18" cy="6" r="1.5" fill="currentColor"/>
+      <circle cx="6" cy="12" r="1.5" fill="currentColor"/>
+      <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+      <circle cx="18" cy="12" r="1.5" fill="currentColor"/>
+      <circle cx="6" cy="18" r="1.5" fill="currentColor"/>
+      <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
+      <circle cx="18" cy="18" r="1.5" fill="currentColor"/>
+    </svg>
+    СвайФундамент
+  </div>
+
+  <div class="toolbar-group">
+    <label>Ширина (м):</label><input type="number" id="houseWidth" value="10" min="1" max="100" step="0.1">
+  </div>
+  <div class="toolbar-group">
+    <label>Длина (м):</label><input type="number" id="houseLength" value="8" min="1" max="100" step="0.1">
+  </div>
+  <div class="toolbar-group">
+    <label>Шаг X (м):</label><input type="number" id="pileStepX" value="2.0" min="0.3" max="10" step="0.1">
+  </div>
+  <div class="toolbar-group">
+    <label>Шаг Y (м):</label><input type="number" id="pileStepY" value="2.0" min="0.3" max="10" step="0.1">
+  </div>
+
+  <div class="toolbar-group">
+    <button class="primary" onclick="buildFoundation()">⚡ Построить</button>
+    <button class="danger" onclick="clearAll()">✕ Очистить</button>
+  </div>
+
+  <div class="toolbar-group">
+    <button class="success" onclick="addVerticalRow()">↕ + Вертикальный ряд</button>
+    <button class="success" onclick="addHorizontalRow()">↔ + Горизонтальный ряд</button>
+    <button id="btnDelV" class="warning" onclick="deleteVerticalRow()">↕ − Вертикальный ряд</button>
+    <button id="btnDelH" class="warning" onclick="deleteHorizontalRow()">↔ − Горизонтальный ряд</button>
+  </div>
+
+  <div class="toolbar-group">
+    <button id="btnCaps" onclick="toggleCaps()">🔲 Оголовки</button>
+    <button id="btnAllDist" class="active" onclick="toggleAllDistances()">📏 Все расстояния</button>
+    <button id="btnBW" onclick="toggleBW()">🖨 Ч/Б режим</button>
+    <button onclick="fitToScreen()">⊡ В экран</button>
+  </div>
+</div>
+
+<div id="canvas-container"><canvas id="canvas"></canvas></div>
+
+<div id="info-panel">
+  <h3>📊 Информация</h3>
+  <div class="info-row"><span class="info-label">Дом:</span><span class="info-value" id="infoHouse">—</span></div>
+  <div class="info-row"><span class="info-label">Свай всего:</span><span class="info-value" id="infoPiles">0</span></div>
+  <div class="info-row"><span class="info-label">Рядов X / Y:</span><span class="info-value" id="infoRows">0 / 0</span></div>
+  <div class="info-row"><span class="info-label">Оси крайн. X / Y:</span><span class="info-value" id="infoAxisDist">—</span></div>
+  <div class="info-row"><span class="info-label">Диагональ дома:</span><span class="info-value" id="infoHouseDiag">—</span></div>
+  <div class="info-row"><span class="info-label">Диагональ свай:</span><span class="info-value" id="infoPileDiag">—</span></div>
+  <div class="info-row"><span class="info-label">Масштаб:</span><span class="info-value" id="infoZoom">100%</span></div>
+</div>
+
+<div id="calc-panel">
+  <h3>💰 Калькулятор сметы</h3>
+  <div class="calc-row"><label>Цена за сваю (₽):</label><input type="number" id="calcPileP" value="3500" oninput="calcUpdate()"></div>
+  <div class="calc-row"><label>Цена оголовка (₽):</label><input type="number" id="calcCapP" value="850" oninput="calcUpdate()"></div>
+  <div class="calc-row"><label>Монтаж за сваю (₽):</label><input type="number" id="calcInstP" value="2500" oninput="calcUpdate()"></div>
+  <div class="calc-row"><label>Доставка (общая ₽):</label><input type="number" id="calcDelP" value="6000" oninput="calcUpdate()"></div>
+  <div class="calc-row"><label>Выезд на замер (₽):</label><input type="number" id="calcSurveyP" value="0" oninput="calcUpdate()"></div>
+  <div class="calc-divider"></div>
+  <div class="calc-row result"><span>Сваи:</span><span id="resPiles">0 ₽</span></div>
+  <div class="calc-row result"><span>Оголовки:</span><span id="resCaps">0 ₽</span></div>
+  <div class="calc-row result"><span>Монтаж:</span><span id="resInst">0 ₽</span></div>
+  <div class="calc-row result"><span>Доставка:</span><span id="resDel">0 ₽</span></div>
+  <div class="calc-row result"><span>Выезд:</span><span id="resSurvey">0 ₽</span></div>
+  <div class="calc-divider"></div>
+  <div class="calc-row total"><span>ИТОГО:</span><span id="resTotal">0 ₽</span></div>
+</div>
+
+<div id="selection-info">
+  <h3>📍 Выделенная свая</h3>
+  <div class="info-row"><span class="info-label">Коорд. X:</span><span class="info-value" id="selX">—</span></div>
+  <div class="info-row"><span class="info-label">Коорд. Y:</span><span class="info-value" id="selY">—</span></div>
+  <div class="info-row"><span class="info-label">До центра:</span><span class="info-value" id="selDist">—</span></div>
+  <div class="info-row"><span class="info-label">Диагональ от угла:</span><span class="info-value" id="selDiag">—</span></div>
+</div>
+
+<div id="zoom-controls">
+  <button onclick="zoomIn()">+</button>
+  <button onclick="zoomReset()">⌂</button>
+  <button onclick="zoomOut()">−</button>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvas-container');
+
+const state = {
+  houseWidth: 10, houseLength: 8,
+  pileStepX: 2.0, pileStepY: 2.0,
+  showGrid: true, showCaps: true,
+  showAllDistances: true, showBW: false,
+  zoom: 1, panX: 0, panY: 0,
+  isDragging: false, dragStartX: 0, dragStartY: 0, panStartX: 0, panStartY: 0,
+  verticalRows: [],
+  horizontalRows: [],
+  selectedPile: null, cellSize: 40, hoveredPile: null, minRows: 2
+};
+
+const metersToCells = m => m * 10;
+const cellsToCm = c => c * 10;
+
+function resizeCanvas() { 
+  canvas.width = container.clientWidth; 
+  canvas.height = container.clientHeight; 
+  draw(); 
+}
+window.addEventListener('resize', resizeCanvas);
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = state.showBW ? '#ffffff' : '#0a0e17'; 
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save(); ctx.translate(state.panX, state.panY); ctx.scale(state.zoom, state.zoom);
+
+  const cp = state.cellSize;
+  const wC = metersToCells(state.houseWidth), hC = metersToCells(state.houseLength);
+  const pad = 25, gridStart = -pad, gridEnd = Math.max(wC, hC) + pad;
+
+  const c = {
+    grid: state.showBW ? 'rgba(0,0,0,0.1)' : 'rgba(42,58,80,0.25)',
+    gridMajor: state.showBW ? 'rgba(0,0,0,0.2)' : 'rgba(96,165,250,0.12)',
+    houseFill: state.showBW ? 'rgba(0,0,0,0.02)' : 'rgba(96,165,250,0.03)',
+    houseStroke: state.showBW ? '#000000' : '#60a5fa',
+    textHouse: state.showBW ? '#000000' : '#60a5fa',
+    rowV: state.showBW ? '#000000' : 'rgba(34,197,94,0.4)',
+    rowH: state.showBW ? '#000000' : 'rgba(245,158,11,0.4)',
+    textRow: state.showBW ? '#000000' : '#4ade80',
+    textRowH: state.showBW ? '#000000' : '#fbbf24',
+    capFill: state.showBW ? 'rgba(0,0,0,0.05)' : 'rgba(217,119,6,0.25)',
+    capStroke: state.showBW ? '#000000' : '#d97706',
+    pileFill: state.showBW ? '#000000' : '#3b82f6',
+    pileFillHov: state.showBW ? '#333333' : '#60a5fa',
+    pileFillSel: state.showBW ? '#000000' : '#ef4444',
+    pileStroke: state.showBW ? '#000000' : '#93c5fd',
+    pileStrokeSel: state.showBW ? '#000000' : '#fca5a5',
+    dimLine: state.showBW ? '#000000' : 'rgba(148,163,184,0.5)',
+    dimText: state.showBW ? '#000000' : '#cbd5e1',
+    diagLine: state.showBW ? '#000000' : 'rgba(245,158,11,0.7)',
+    diagTextBg: state.showBW ? 'rgba(255,255,255,0.9)' : 'rgba(10,14,23,0.85)',
+    diagTextStroke: state.showBW ? '#000000' : 'rgba(245,158,11,0.5)',
+    diagTextFill: state.showBW ? '#000000' : '#fbbf24',
+    originMark: state.showBW ? '#000000' : '#f59e0b',
+    diagDimLine: state.showBW ? 'rgba(0,0,0,0.4)' : 'rgba(168,85,247,0.5)',
+    diagDimText: state.showBW ? '#000000' : '#a855f7'
+  };
+
+  if(state.showGrid){
+    ctx.strokeStyle = c.grid; ctx.lineWidth = 0.5; ctx.beginPath();
+    for(let x=gridStart;x<=gridEnd;x++){ctx.moveTo(x*cp,gridStart*cp);ctx.lineTo(x*cp,gridEnd*cp);}
+    for(let y=gridStart;y<=gridEnd;y++){ctx.moveTo(gridStart*cp,y*cp);ctx.lineTo(gridEnd*cp,y*cp);}
+    ctx.stroke();
+    ctx.strokeStyle = c.gridMajor; ctx.lineWidth = 1; ctx.beginPath();
+    for(let x=gridStart;x<=gridEnd;x+=10){ctx.moveTo(x*cp,gridStart*cp);ctx.lineTo(x*cp,gridEnd*cp);}
+    for(let y=gridStart;y<=gridEnd;y+=10){ctx.moveTo(gridStart*cp,y*cp);ctx.lineTo(gridEnd*cp,y*cp);}
+    ctx.stroke();
+  }
+
+  const hw=wC*cp, hh=hC*cp;
+  ctx.fillStyle = c.houseFill; ctx.fillRect(0,0,hw,hh);
+  ctx.strokeStyle = c.houseStroke; ctx.lineWidth = 2.5; ctx.setLineDash([]); ctx.strokeRect(0,0,hw,hh);
+  ctx.fillStyle = c.textHouse; ctx.font = `bold ${14/state.zoom}px sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(`${state.houseWidth} м`, hw/2, -12);
+  ctx.save(); ctx.translate(-14, hh/2); ctx.rotate(-Math.PI/2); ctx.fillText(`${state.houseLength} м`, 0, 0); ctx.restore();
+
+  ctx.lineWidth = 2; const gridMin = -pad*cp, gridMax = gridEnd*cp;
+  state.verticalRows.forEach((x,i)=>{
+    const px = x*cp; ctx.strokeStyle = c.rowV; ctx.setLineDash([8/state.zoom, 4/state.zoom]);
+    ctx.beginPath(); ctx.moveTo(px, gridMin); ctx.lineTo(px, gridMax); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = c.textRow; ctx.font = `bold ${12/state.zoom}px sans-serif`; ctx.textAlign = 'center'; 
+    ctx.fillText(`X${i+1}`, px, gridMax + 18/state.zoom);
+  });
+  state.horizontalRows.forEach((y,i)=>{
+    const py = y*cp; ctx.strokeStyle = c.rowH; ctx.setLineDash([8/state.zoom, 4/state.zoom]);
+    ctx.beginPath(); ctx.moveTo(gridMin, py); ctx.lineTo(gridMax, py); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = c.textRowH; ctx.font = `bold ${12/state.zoom}px sans-serif`; ctx.textAlign = 'left'; 
+    ctx.fillText(`Y${i+1}`, gridMax + 8/state.zoom, py + 5/state.zoom);
+  });
+
+  if(state.showCaps){
+    ctx.fillStyle = c.capFill; ctx.strokeStyle = c.capStroke; ctx.lineWidth = 1.5/state.zoom;
+    state.verticalRows.forEach(x => state.horizontalRows.forEach(y => {
+      ctx.fillRect(x*cp-cp, y*cp-cp, cp*2, cp*2);
+      ctx.strokeRect(x*cp-cp, y*cp-cp, cp*2, cp*2);
+    }));
+  }
+
+  const r = 5/state.zoom;
+  state.verticalRows.forEach(x => state.horizontalRows.forEach(y => {
+    const px = x*cp, py = y*cp;
+    const isSel = state.selectedPile && state.selectedPile.x === x && state.selectedPile.y === y;
+    const isHov = state.hoveredPile && state.hoveredPile.x === x && state.hoveredPile.y === y;
+    const isOrigin = state.verticalRows.length > 0 && state.horizontalRows.length > 0 && x === state.verticalRows[0] && y === state.horizontalRows[0];
+    
+    if(isOrigin && !isSel){
+      ctx.beginPath(); ctx.arc(px, py, r*2.5, 0, Math.PI*2);
+      ctx.strokeStyle = c.originMark; ctx.lineWidth = 2.5/state.zoom; ctx.stroke();
+      ctx.fillStyle = c.originMark; ctx.font = `bold ${11/state.zoom}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('0', px, py);
+    }
+    if(isSel || isHov){
+      ctx.beginPath(); ctx.arc(px, py, r*3, 0, Math.PI*2);
+      ctx.fillStyle = isSel ? (state.showBW ? 'rgba(0,0,0,0.15)' : 'rgba(239,68,68,0.4)') : (state.showBW ? 'rgba(0,0,0,0.1)' : 'rgba(96,165,250,0.3)');
+      ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2);
+    ctx.fillStyle = isSel ? c.pileFillSel : isHov ? c.pileFillHov : c.pileFill;
+    ctx.fill();
+    ctx.strokeStyle = isSel ? c.pileStrokeSel : c.pileStroke;
+    ctx.lineWidth = 2/state.zoom; ctx.stroke();
+    ctx.beginPath(); ctx.arc(px, py, r*0.35, 0, Math.PI*2);
+    ctx.fillStyle = state.showBW ? '#ffffff' : '#fff'; ctx.fill();
+  }));
+
+  // Diagonal from origin
+  if(state.selectedPile && state.verticalRows.length > 0 && state.horizontalRows.length > 0){
+    const ox = state.verticalRows[0], oy = state.horizontalRows[0];
+    const spx = state.selectedPile.x*cp, spy = state.selectedPile.y*cp;
+    const opx = ox*cp, opy = oy*cp;
+    const distCm = cellsToCm(Math.sqrt((state.selectedPile.x-ox)**2 + (state.selectedPile.y-oy)**2));
+    const label = `${distCm.toFixed(1)} см`;
+    
+    ctx.save(); ctx.strokeStyle = c.diagLine; ctx.lineWidth = 2.5/state.zoom; ctx.setLineDash([10/state.zoom, 6/state.zoom]);
+    ctx.beginPath(); ctx.moveTo(opx, opy); ctx.lineTo(spx, spy); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+    
+    const midX = (opx+spx)/2, midY = (opy+spy)/2, angle = Math.atan2(spy-opy, spx-opx);
+    ctx.save(); ctx.translate(midX, midY); ctx.rotate(angle);
+    const p = 8/state.zoom; ctx.font = `bold ${12/state.zoom}px sans-serif`; const tw = ctx.measureText(label).width;
+    ctx.fillStyle = c.diagTextBg; ctx.fillRect(-tw/2-p, -p, tw+p*2, p*2+4/state.zoom);
+    ctx.strokeStyle = c.diagTextStroke; ctx.lineWidth = 1/state.zoom; ctx.strokeRect(-tw/2-p, -p, tw+p*2, p*2+4/state.zoom);
+    ctx.fillStyle = c.diagTextFill; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, 0, 0); ctx.restore();
+  }
+
+  // ALL DISTANCES BETWEEN ADJACENT PILES (For mounting)
+  if (state.showAllDistances) {
+    ctx.font = `bold ${9/state.zoom}px sans-serif`;
+    
+    // Horizontal distances (between piles in each row)
+    ctx.textAlign = 'center';
+    for (let y of state.horizontalRows) {
+      for (let i = 0; i < state.verticalRows.length - 1; i++) {
+        const x1 = state.verticalRows[i] * cp;
+        const x2 = state.verticalRows[i+1] * cp;
+        const dist = cellsToCm(state.verticalRows[i+1] - state.verticalRows[i]);
+        const midX = (x1 + x2) / 2;
+        const midY = y * cp;
+
+        ctx.strokeStyle = c.dimLine;
+        ctx.lineWidth = 1 / state.zoom;
+        ctx.beginPath(); ctx.moveTo(x1, midY); ctx.lineTo(x2, midY); ctx.stroke();
+
+        const label = `${dist.toFixed(1)} см`;
+        ctx.save();
+        ctx.translate(midX, midY - 8/state.zoom);
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = state.showBW ? '#ffffff' : 'rgba(10,14,23,0.85)';
+        ctx.fillRect(-tw/2 - 2/state.zoom, -6/state.zoom, tw + 4/state.zoom, 12/state.zoom);
+        ctx.fillStyle = c.dimText;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    // Vertical distances (between piles in each column)
+    ctx.textAlign = 'left';
+    for (let x of state.verticalRows) {
+      for (let i = 0; i < state.horizontalRows.length - 1; i++) {
+        const y1 = state.horizontalRows[i] * cp;
+        const y2 = state.horizontalRows[i+1] * cp;
+        const dist = cellsToCm(state.horizontalRows[i+1] - state.horizontalRows[i]);
+        const midX = x * cp;
+        const midY = (y1 + y2) / 2;
+
+        ctx.strokeStyle = c.dimLine;
+        ctx.lineWidth = 1 / state.zoom;
+        ctx.beginPath(); ctx.moveTo(midX, y1); ctx.lineTo(midX, y2); ctx.stroke();
+
+        const label = `${dist.toFixed(1)} см`;
+        ctx.save();
+        ctx.translate(midX + 6/state.zoom, midY);
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = state.showBW ? '#ffffff' : 'rgba(10,14,23,0.85)';
+        ctx.fillRect(-2/state.zoom, -6/state.zoom, tw + 4/state.zoom, 12/state.zoom);
+        ctx.fillStyle = c.dimText;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    // DIAGONAL DISTANCES (between diagonally adjacent piles)
+    ctx.textAlign = 'center';
+    for (let i = 0; i < state.verticalRows.length - 1; i++) {
+      for (let j = 0; j < state.horizontalRows.length - 1; j++) {
+        const x1 = state.verticalRows[i] * cp;
+        const y1 = state.horizontalRows[j] * cp;
+        const x2 = state.verticalRows[i+1] * cp;
+        const y2 = state.horizontalRows[j+1] * cp;
+        
+        const dx = state.verticalRows[i+1] - state.verticalRows[i];
+        const dy = state.horizontalRows[j+1] - state.horizontalRows[j];
+        const dist = cellsToCm(Math.sqrt(dx*dx + dy*dy));
+        
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+
+        // Draw diagonal line
+        ctx.strokeStyle = c.diagDimLine;
+        ctx.lineWidth = 1 / state.zoom;
+        ctx.setLineDash([4/state.zoom, 3/state.zoom]);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw label
+        const label = `${dist.toFixed(1)}`;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        
+        ctx.save();
+        ctx.translate(midX, midY);
+        ctx.rotate(angle);
+        
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = state.showBW ? 'rgba(255,255,255,0.95)' : 'rgba(10,14,23,0.9)';
+        ctx.fillRect(-tw/2 - 3/state.zoom, -7/state.zoom, tw + 6/state.zoom, 14/state.zoom);
+        
+        ctx.strokeStyle = c.diagDimLine;
+        ctx.lineWidth = 0.5 / state.zoom;
+        ctx.strokeRect(-tw/2 - 3/state.zoom, -7/state.zoom, tw + 6/state.zoom, 14/state.zoom);
+        
+        ctx.fillStyle = c.diagDimText;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+    }
+  }
+
+  ctx.fillStyle = c.dimText; ctx.globalAlpha = 0.6;
+  ctx.font = `bold ${11/state.zoom}px sans-serif`; ctx.textAlign = 'left';
+  ctx.fillText('▦ 1 клетка = 10 см', 12, -8); ctx.globalAlpha = 1.0;
+  
+  ctx.restore(); updateInfo(); updateButtons();
+}
+
+function updateButtons(){
+  const btnDelV = document.getElementById('btnDelV');
+  const btnDelH = document.getElementById('btnDelH');
+  if(btnDelV) btnDelV.disabled = state.verticalRows.length <= state.minRows;
+  if(btnDelH) btnDelH.disabled = state.horizontalRows.length <= state.minRows;
+  
+  const b = document.getElementById('btnCaps');
+  if(b){ b.classList.toggle('active', state.showCaps); b.textContent = state.showCaps ? '🔲 Оголовки ВКЛ' : '🔲 Оголовки ВЫКЛ'; }
+  
+  const btnAll = document.getElementById('btnAllDist');
+  if(btnAll) btnAll.classList.toggle('active', state.showAllDistances);
+  
+  const btnBW = document.getElementById('btnBW');
+  if(btnBW) btnBW.classList.toggle('active', state.showBW);
+}
+
+function updateInfo(){
+  const elHouse = document.getElementById('infoHouse');
+  const elPiles = document.getElementById('infoPiles');
+  const elRows = document.getElementById('infoRows');
+  const elAxis = document.getElementById('infoAxisDist');
+  const elHouseDiag = document.getElementById('infoHouseDiag');
+  const elPileDiag = document.getElementById('infoPileDiag');
+  const elZoom = document.getElementById('infoZoom');
+
+  if(elHouse) elHouse.textContent = `${state.houseWidth}×${state.houseLength} м`;
+  if(elPiles) elPiles.textContent = state.verticalRows.length * state.horizontalRows.length;
+  if(elRows) elRows.textContent = `${state.verticalRows.length} / ${state.horizontalRows.length}`;
+  
+  const ax = state.verticalRows.length > 1 ? cellsToCm(state.verticalRows.at(-1) - state.verticalRows[0]) : 0;
+  const ay = state.horizontalRows.length > 1 ? cellsToCm(state.horizontalRows.at(-1) - state.horizontalRows[0]) : 0;
+  if(elAxis) elAxis.textContent = `${ax.toFixed(1)} / ${ay.toFixed(1)} см`;
+  if(elHouseDiag) elHouseDiag.textContent = `${(Math.sqrt(state.houseWidth**2 + state.houseLength**2) * 100).toFixed(1)} см`;
+  if(elPileDiag) elPileDiag.textContent = `${Math.sqrt(ax**2 + ay**2).toFixed(1)} см`;
+  if(elZoom) elZoom.textContent = Math.round(state.zoom * 100) + '%';
+
+  const si = document.getElementById('selection-info');
+  if(state.selectedPile && state.verticalRows.length > 0 && state.horizontalRows.length > 0){
+    si.style.display = 'block'; const p = state.selectedPile;
+    document.getElementById('selX').textContent = `${cellsToCm(p.x).toFixed(1)} см`;
+    document.getElementById('selY').textContent = `${cellsToCm(p.y).toFixed(1)} см`;
+    const cx = metersToCells(state.houseWidth)/2, cy = metersToCells(state.houseLength)/2;
+    document.getElementById('selDist').textContent = `${cellsToCm(Math.sqrt((p.x-cx)**2 + (p.y-cy)**2)).toFixed(1)} см`;
+    const distDiag = Math.sqrt((p.x-state.verticalRows[0])**2 + (p.y-state.horizontalRows[0])**2) * 10;
+    document.getElementById('selDiag').textContent = `${distDiag.toFixed(1)} см`;
+  } else si.style.display = 'none';
+  
+  calcUpdate();
+}
+
+function calcUpdate(){
+  const count = state.verticalRows.length * state.horizontalRows.length;
+  const pp = parseFloat(document.getElementById('calcPileP').value) || 0;
+  const capP = parseFloat(document.getElementById('calcCapP').value) || 0;
+  const ip = parseFloat(document.getElementById('calcInstP').value) || 0;
+  const dp = parseFloat(document.getElementById('calcDelP').value) || 0;
+  const sp = parseFloat(document.getElementById('calcSurveyP').value) || 0;
+  const capsCount = state.showCaps ? count : 0;
+  
+  const tPiles = count*pp, tCaps = capsCount*capP, tInst = count*ip, tSurvey = sp, tTotal = tPiles + tCaps + tInst + dp + tSurvey;
+  
+  const fmt = n => n.toLocaleString('ru-RU') + ' ₽';
+  document.getElementById('resPiles').textContent = fmt(tPiles);
+  document.getElementById('resCaps').textContent = fmt(tCaps);
+  document.getElementById('resInst').textContent = fmt(tInst);
+  document.getElementById('resDel').textContent = fmt(dp);
+  document.getElementById('resSurvey').textContent = fmt(tSurvey);
+  document.getElementById('resTotal').textContent = fmt(tTotal);
+}
+
+function toggleBW(){
+  state.showBW = !state.showBW;
+  document.body.classList.toggle('bw-mode', state.showBW);
+  draw();
+}
+
+function toggleAllDistances(){
+  state.showAllDistances = !state.showAllDistances;
+  draw();
+}
+
+function redistributeRows(type){
+  const arr = type === 'vertical' ? state.verticalRows : state.horizontalRows;
+  const total = type === 'vertical' ? metersToCells(state.houseWidth) : metersToCells(state.houseLength);
+  const len = arr.length; if(len < 2){ arr.length = 0; arr.push(0, total); return; }
+  let start = state.showCaps ? 1 : 0, end = state.showCaps ? total - 1 : total, span = Math.max(0, end - start);
+  arr.length = 0; for(let i=0; i<len; i++) arr.push(start + i * (span / (len - 1)));
+}
+
+function buildFoundation(){
+  state.houseWidth = parseFloat(document.getElementById('houseWidth').value) || 10;
+  state.houseLength = parseFloat(document.getElementById('houseLength').value) || 8;
+  state.pileStepX = parseFloat(document.getElementById('pileStepX').value) || 2.0;
+  state.pileStepY = parseFloat(document.getElementById('pileStepY').value) || 2.0;
+  const wC = metersToCells(state.houseWidth), hC = metersToCells(state.houseLength);
+  const sW = state.showCaps ? (wC - 2) : wC, sH = state.showCaps ? (hC - 2) : hC;
+  let nV = Math.max(2, Math.round(sW / metersToCells(state.pileStepX)) + 1), nH = Math.max(2, Math.round(sH / metersToCells(state.pileStepY)) + 1);
+  state.verticalRows = new Array(nV).fill(0); state.horizontalRows = new Array(nH).fill(0);
+  redistributeRows('vertical'); redistributeRows('horizontal'); state.selectedPile = null;
+  fitToScreen();
+}
+
+function addVerticalRow(){ state.verticalRows.push(0); redistributeRows('vertical'); draw(); }
+function addHorizontalRow(){ state.horizontalRows.push(0); redistributeRows('horizontal'); draw(); }
+function deleteVerticalRow(){ if(state.verticalRows.length <= state.minRows) return; state.verticalRows.pop(); redistributeRows('vertical'); draw(); }
+function deleteHorizontalRow(){ if(state.horizontalRows.length <= state.minRows) return; state.horizontalRows.pop(); redistributeRows('horizontal'); draw(); }
+function toggleCaps(){ state.showCaps = !state.showCaps; if(state.verticalRows.length > 1) redistributeRows('vertical'); if(state.horizontalRows.length > 1) redistributeRows('horizontal'); draw(); }
+function clearAll(){ state.verticalRows = []; state.horizontalRows = []; state.selectedPile = null; draw(); }
+
+function zoomIn(){ state.zoom = Math.min(state.zoom*1.3, 6); draw(); }
+function zoomOut(){ state.zoom = Math.max(state.zoom/1.3, 0.1); draw(); }
+function zoomReset(){ state.zoom = 1; state.panX = 0; state.panY = 0; fitToScreen(); }
+
+function fitToScreen(){
+  if(container.clientWidth === 0 || container.clientHeight === 0) return;
+  const cw = canvas.width, ch = canvas.height, cp = state.cellSize, wC = metersToCells(state.houseWidth), hC = metersToCells(state.houseLength), pad = 90;
+  const fitW = (cw - pad*2) / ((wC + 40)*cp);
+  const fitH = (ch - pad*2) / ((hC + 40)*cp);
+  state.zoom = Math.min(fitW, fitH, 2);
+  if(state.zoom < 0.05) state.zoom = 0.1;
+  state.panX = (cw - (wC + 40)*cp*state.zoom) / 2;
+  state.panY = (ch - (hC + 40)*cp*state.zoom) / 2 + 20;
+  draw();
+}
+
+container.addEventListener('mousedown', e => { state.isDragging = true; state.dragStartX = e.clientX; state.dragStartY = e.clientY; state.panStartX = state.panX; state.panStartY = state.panY; });
+container.addEventListener('mousemove', e => {
+  if(state.isDragging){ state.panX = state.panStartX + (e.clientX - state.dragStartX); state.panY = state.panStartY + (e.clientY - state.dragStartY); draw(); return; }
+  const r = canvas.getBoundingClientRect(), wx = (e.clientX - r.left - state.panX)/state.zoom, wy = (e.clientY - r.top - state.panY)/state.zoom; let f = null;
+  for(const x of state.verticalRows) for(const y of state.horizontalRows) if(Math.sqrt((x*state.cellSize - wx)**2 + (y*state.cellSize - wy)**2) < 14/state.zoom) f = {x, y};
+  if(!state.hoveredPile || !f || state.hoveredPile.x !== f.x || state.hoveredPile.y !== f.y){ state.hoveredPile = f; draw(); }
+});
+container.addEventListener('mouseup', e => {
+  if(!state.isDragging) return;
+  if(Math.abs(e.clientX - state.dragStartX) < 3 && Math.abs(e.clientY - state.dragStartY) < 3){
+    const r = canvas.getBoundingClientRect(), wx = (e.clientX - r.left - state.panX)/state.zoom, wy = (e.clientY - r.top - state.panY)/state.zoom; let f = null;
+    for(const x of state.verticalRows) for(const y of state.horizontalRows) if(Math.sqrt((x*state.cellSize - wx)**2 + (y*state.cellSize - wy)**2) < 14/state.zoom) f = {x, y};
+    state.selectedPile = f; draw();
+  }
+  state.isDragging = false;
+});
+container.addEventListener('wheel', e => {
+  e.preventDefault(); const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, o = state.zoom, f = e.deltaY > 0 ? 0.85 : 1.18;
+  state.zoom = Math.max(0.05, Math.min(6, state.zoom * f));
+  state.panX = mx - (mx - state.panX) * (state.zoom / o);
+  state.panY = my - (my - state.panY) * (state.zoom / o);
+  draw();
+}, {passive: false});
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ state.selectedPile = null; draw(); }
+  if(e.key === 'g' || e.key === 'п') { state.showGrid = !state.showGrid; draw(); }
+  if(e.key === 'c' || e.key === 'с') { toggleCaps(); }
+  if(e.key === 'b' || e.key === 'и') { toggleBW(); }
+  if(e.key === 'a' || e.key === 'ф') { toggleAllDistances(); }
+});
+
+resizeCanvas();
+buildFoundation();
+</script>
+</body>
+</html>
